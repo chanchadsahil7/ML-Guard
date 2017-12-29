@@ -4,12 +4,18 @@ import os
 import math
 import random
 from sklearn.datasets.mldata import fetch_mldata
+from sklearn.model_selection import GridSearchCV
 from sklearn.svm import LinearSVC
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.externals import joblib
 import Main
 
-kNearest = LinearSVC()
+param_grid = [
+  {'C': [1, 10, 100, 1000]}
+ ]
+svc = LinearSVC()
+kNearest = GridSearchCV(svc, param_grid, cv=3,
+                           scoring='neg_mean_squared_error')
 # kNearest = cv2.ml.KNearest_create()
 MIN_PIXEL_WIDTH = 2
 MIN_PIXEL_HEIGHT = 8
@@ -356,6 +362,7 @@ def recognizeCharsInPlate(imgThresh, listOfMatchingChars):
                 # crop char out of threshold image
         imgROI = imgThresh[currentChar.intBoundingRectY : currentChar.intBoundingRectY + currentChar.intBoundingRectHeight,
                            currentChar.intBoundingRectX : currentChar.intBoundingRectX + currentChar.intBoundingRectWidth]
+
 
         imgROIResized = cv2.resize(imgROI, (RESIZED_CHAR_IMAGE_WIDTH, RESIZED_CHAR_IMAGE_HEIGHT))           # resize image, this is necessary for char recognition
 
@@ -788,7 +795,7 @@ def main(filename):
 
         cv2.imshow("imgOriginalScene", imgOriginalScene)                # re-show scene image
 
-        #cv2.imwrite("imgOriginalScene.png", imgOriginalScene)           # write image out to file
+        cv2.imwrite("imgOriginalScene.png", imgOriginalScene)           # write image out to file
 
     # end if else
 
