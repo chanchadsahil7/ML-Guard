@@ -4,14 +4,15 @@ import cv2
 import os
 
 # module level variables ##########################################################################
-MIN_CONTOUR_AREA = 100
+MIN_CONTOUR_AREA = 40
 
 RESIZED_IMAGE_WIDTH = 20
 RESIZED_IMAGE_HEIGHT = 30
 
 ###################################################################################################
 def main():
-    imgTrainingNumbers = cv2.imread("font_main.png")            # read in training numbers image
+    filename = input('Enter the file path : ')
+    imgTrainingNumbers = cv2.imread(filename)            # read in training numbers image
 
     if imgTrainingNumbers is None:                          # if image was not read successfully
         print("error: image not read from file \n\n")        # print error message to std out

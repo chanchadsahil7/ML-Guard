@@ -9,16 +9,10 @@ from sklearn.svm import LinearSVC
 from sklearn import svm
 from sklearn.ensemble import GradientBoostingClassifier
 from sklearn.externals import joblib
-
 import Main
 
-param_grid = [
-  {'C': [1, 10, 100, 1000]}
- ]
-svc = LinearSVC()
-kNearest = GridSearchCV(svc, param_grid, cv=3,
-                           scoring='neg_mean_squared_error')
-# kNearest = cv2.ml.KNearest_create()
+kNearest = cv2.ml.KNearest_create()
+
 MIN_PIXEL_WIDTH = 2
 MIN_PIXEL_HEIGHT = 8
 MIN_ASPECT_RATIO = 0.25
@@ -33,7 +27,7 @@ MAX_ANGLE_BETWEEN_CHARS = 12.0
 MIN_NUMBER_OF_MATCHING_CHARS = 3
 RESIZED_CHAR_IMAGE_WIDTH = 20
 RESIZED_CHAR_IMAGE_HEIGHT = 30
-MIN_CONTOUR_AREA = 100
+MIN_CONTOUR_AREA = 40
 GAUSSIAN_SMOOTH_FILTER_SIZE = (5, 5)
 ADAPTIVE_THRESH_BLOCK_SIZE = 19
 ADAPTIVE_THRESH_WEIGHT = 9
@@ -86,39 +80,31 @@ class PossibleChar:
 # end class
 
 def loadKNNDataAndTrainKNN():
-    mnist = fetch_mldata('MNIST original', data_home='/media/Vancouver/apps/mnist_dataset/')
-    x_train = mnist['data']
-    y_train = mnist['target']
-    kNearest.fit(np.loadtxt("flattened_images.txt", np.float32),np.loadtxt("classifications.txt", np.float32))
-    return True
+    allContoursWithData = []                # declare empty lists,
+    validContoursWithData = []              # we will fill these shortly
 
-# def loadKNNDataAndTrainKNN():
-#     allContoursWithData = []                # declare empty lists,
-#     validContoursWithData = []              # we will fill these shortly
-#
-#     try:
-#         npaClassifications = np.loadtxt("classifications.txt", np.float32)                  # read in training classifications
-#     except:                                                                                 # if file could not be opened
-#         print("error, unable to open classifications.txt, exiting program\n")                # show error message
-#         os.system("pause")
-#         return False                                                                        # and return False
-#     # end try
-#
-#     try:
-#         npaFlattenedImages = np.loadtxt("flattened_images.txt", np.float32)                 # read in training images
-#     except:                                                                                 # if file could not be opened
-#         print("error, unable to open flattened_images.txt, exiting program\n")               # show error message
-#         os.system("pause")
-#         return False                                                                        # and return False
-#     # end try
-#
-#     npaClassifications = npaClassifications.reshape((npaClassifications.size, 1))       # reshape numpy array to 1d, necessary to pass to call to train
-#
-#     kNearest.setDefaultK(1)                                                             # set default K to 1
-#
-#     kNearest.train(npaFlattenedImages, cv2.ml.ROW_SAMPLE, npaClassifications)           # train KNN object
-#
-#     return True
+    try:
+        npaClassifications = np.loadtxt("classifications.txt", np.float32)                  # read in training classifications
+    except:                                                                                 # if file could not be opened
+        print("error, unable to open classifications.txt, exiting program\n")                # show error message
+        os.system("pause")
+        return False                                                                        # and return False
+    # end try
+
+    try:
+        npaFlattenedImages = np.loadtxt("flattened_images.txt", np.float32)                 # read in training images
+    except:                                                                                 # if file could not be opened
+        print("error, unable to open flattened_images.txt, exiting program\n")               # show error message
+        os.system("pause")
+        return False                                                                        # and return False
+    # end try
+
+    npaClassifications = npaClassifications.reshape((npaClassifications.size, 1))       # reshape numpy array to 1d, necessary to pass to call to train
+
+    kNearest.setDefaultK(1)                                                             # set default K to 1
+
+    kNearest.train(npaFlattenedImages, cv2.ml.ROW_SAMPLE, npaClassifications)           # train KNN object
+    return True
 
 def extractValue(imgOriginal):
     height, width, numChannels = imgOriginal.shape
@@ -373,13 +359,9 @@ def recognizeCharsInPlate(imgThresh, listOfMatchingChars):
         npaROIResized = np.float32(npaROIResized)               # convert from 1d numpy array of ints to 1d numpy array of floats
 
 
-        # retval, npaResults, neigh_resp, dists = kNearest.findNearest(npaROIResized, k = 1)              # finally we can call findNearest !!!
-        #
-        # strCurrentChar = str(chr(int(npaResults[0][0])))
-        #  get character from results
-        npaResults = kNearest.predict(npaROIResized)
-        # strCurrentChar = str(chr(int(npaResults)))
-        strCurrentChar = str(chr(int(npaResults)))
+        retval, npaResults, neigh_resp, dists = kNearest.findNearest(npaROIResized, k = 1)              # finally we can call findNearest !!!
+
+        strCurrentChar = str(chr(int(npaResults[0][0]))) # get character from results
         strChars = strChars + strCurrentChar                        # append current char to full string
 
     # end for
@@ -665,7 +647,7 @@ def detectPlatesInScene(imgOriginalScene):
         # end if
     # end for
 
-    print("\n" + str(len(listOfPossiblePlates)) + " possible plates found")          # 13 with MCLRNF1 image
+    #print("\n" + str(len(listOfPossiblePlates)) + " possible plates found")          # 13 with MCLRNF1 image
 
     if Main.showSteps == True: # show steps #######################################################
         print("\n")
@@ -742,79 +724,61 @@ def writeLicensePlateCharsOnImage(imgOriginalScene, licPlate):
     cv2.putText(imgOriginalScene, licPlate.strChars, (ptLowerLeftTextOriginX, ptLowerLeftTextOriginY), intFontFace, fltFontScale, SCALAR_YELLOW, intFontThickness)
 
 
-def main(filename):
+def main_helper_func(imgOriginalScene):
+    listOfPossiblePlates = detectPlatesInScene(imgOriginalScene)  # detect plates
 
-    blnKNNTrainingSuccessful = loadKNNDataAndTrainKNN()         # attempt KNN training
+    listOfPossiblePlates = detectCharsInPlates(listOfPossiblePlates)  # detect chars in plates
 
-    if blnKNNTrainingSuccessful == False:                               # if KNN training was not successful
-        print("\nerror: KNN traning was not successful\n")               # show error message
-        return                                                          # and exit program
-    # end if
+    # cv2.imshow("imgOriginalScene", imgOriginalScene)            # show scene image
 
-    imgOriginalScene  = cv2.imread(filename)               # open image
+    if len(listOfPossiblePlates) == 0:  # if no plates were found
+        print("\nno license plates were detected\n")  # inform user no plates were found
+    else:  # else
+        # if we get in here list of possible plates has at leat one plate
 
-    if imgOriginalScene is None:                            # if image was not read successfully
-        print("\nerror: image not read from file \n\n")      # print error message to std out
-        os.system("pause")                                  # pause so user can see error message
-        return                                              # and exit program
-    # end if
+        # sort the list of possible plates in DESCENDING order (most number of chars to least number of chars)
+        listOfPossiblePlates.sort(key=lambda possiblePlate: len(possiblePlate.strChars), reverse=True)
 
-    listOfPossiblePlates = detectPlatesInScene(imgOriginalScene)           # detect plates
-
-    listOfPossiblePlates = detectCharsInPlates(listOfPossiblePlates)        # detect chars in plates
-
-    #cv2.imshow("imgOriginalScene", imgOriginalScene)            # show scene image
-
-    if len(listOfPossiblePlates) == 0:                          # if no plates were found
-        print("\nno license plates were detected\n")             # inform user no plates were found
-    else:                                                       # else
-                # if we get in here list of possible plates has at leat one plate
-
-                # sort the list of possible plates in DESCENDING order (most number of chars to least number of chars)
-        listOfPossiblePlates.sort(key = lambda possiblePlate: len(possiblePlate.strChars), reverse = True)
-
-                # suppose the plate with the most recognized chars (the first plate in sorted by string length descending order) is the actual plate
+        # suppose the plate with the most recognized chars (the first plate in sorted by string length descending order) is the actual plate
         licPlate = listOfPossiblePlates[0]
 
-        # plates = listOfPossiblePlates
-        # i=0
-        # for plate in plates:
-        #     cv2.imwrite("imgPlate"+str(i)+'.png', plate.imgPlate)
-        #     i+=1# show crop of plate and threshold of plate
-        #     # cv2.imshow("imgThresh", plate.imgThresh)
-
-        if len(licPlate.strChars) == 0:                     # if no chars were found in the plate
-            print("\nno characters were detected\n\n")       # show message
-            return                                          # and exit program
+        if len(licPlate.strChars) == 0:  # if no chars were found in the plate
+            return 0
         # end if
 
-        drawRedRectangleAroundPlate(imgOriginalScene, licPlate)             # draw red rectangle around plate
-
-        print("\nlicense plate read from image = " + licPlate.strChars + "\n")       # write license plate text to std out
-        print("----------------------------------------")
-
-        writeLicensePlateCharsOnImage(imgOriginalScene, licPlate)           # write license plate text on the image
-
-        cv2.imshow("imgOriginalScene", imgOriginalScene)                # re-show scene image
-
-        #cv2.imwrite(filename+".png", imgOriginalScene)           # write image out to file
+        # drawRedRectangleAroundPlate(imgOriginalScene, licPlate)  # draw red rectangle around plate
+        #
+        # writeLicensePlateCharsOnImage(imgOriginalScene, licPlate)  # write license plate text on the image
+        #
+        # cv2.imshow("imgOriginalScene", imgOriginalScene)  # re-show scene image
 
     # end if else
+    cv2.waitKey(0)  # hold windows open until user presses a key
+    return licPlate.strChars  # return license plate text
 
-    cv2.waitKey(0)					# hold windows open until user presses a key
 
-    return
+def train_model():
+    blnKNNTrainingSuccessful = loadKNNDataAndTrainKNN()  # attempt KNN training
+    if blnKNNTrainingSuccessful == False:  # if KNN training was not successful
+        print("\nerror: KNN traning was not successful\n")  # show error message
+        return  # and exit program
+    # end if
+
+def main_func(filename):
+    imgOriginalScene = cv2.imread(filename)  # open image
+    if imgOriginalScene is None:                         # if image was not read successfully
+        print("\nError: image not read from file \n\n")  # print error message to std out
+        os.system("pause")                               # pause so user can see error message
+        return                                           # and exit program
+    # end if
+
+    result = main_helper_func(imgOriginalScene)
+    return result
+
+def initialize_train_model():
+    train_model()
 
 if __name__ == "__main__":
-    file_name = input("enter picture file:")
-    main(file_name)
-    # input_video = input("enter video file:")
-    # cap = cv2.VideoCapture(input_video)
-    # while True:
-    #     ret, frame = cap.read()
-    #     cv2.imshow('frame', frame)
-    #     if cv2.waitKey(33) == 13:
-    #         cv2.imwrite('hello.png', frame)
-    #         main('hello.png')
-    #     elif cv2.waitKey(33) == 27:
-    #         break
+    initialize_train_model()
+    filename = input('Enter the path of the file : ')
+    print("Licnese plate : ",main_func(filename))
