@@ -16,17 +16,17 @@ def test():
     contents = fp.read().split('\n')
 
     i = 0
-    count1 = count2 = count3 = total_count2 = 0
+    count1 = count2 = count3 = total_count2 = 0 ; total_count1 = 0
 
     for name in files:
         result = main_func(BASE_DIR + 'car_front_images\\' + name)
         if result == 0:
             print "No chars were found in the plate"
         else:
-            # print result, contents[i]
-            if result == contents[i]:
-                count1 += 1
             if len(result) == len(contents[i]):
+                total_count1+=1
+                if result == contents[i]:
+                    count1 += 1
                 total_count2 += len(contents[i])
                 j = 0
                 while j < len(contents[i]) and j < len(result):
@@ -36,7 +36,7 @@ def test():
             else:
                 count3 += 1
         i += 1
-    print "Number of plates correctly predicted : ", count1
+    print count1, " plates predicted correctly out of", total_count1
     print count2, " predicted correctly out of ", total_count2
     print "Number of plates whose length is more/less than the original ", count3
     return

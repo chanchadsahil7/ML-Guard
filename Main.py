@@ -3,15 +3,14 @@ import numpy as np
 import os
 import math
 import random
-from sklearn.datasets.mldata import fetch_mldata
-from sklearn.model_selection import GridSearchCV
-from sklearn.svm import LinearSVC
-from sklearn import svm
-from sklearn.ensemble import GradientBoostingClassifier
-from sklearn.externals import joblib
 import Main
+from sklearn.neighbors import KNeighborsClassifier
+from sklearn.model_selection import GridSearchCV
 
-kNearest = cv2.ml.KNearest_create()
+#parameters = {'n_neighbors':[1,3,5,7], 'weights':['uniform',"distance"],"algorithm":["auto", "ball_tree", "kd_tree", "brute"]}
+#knn = KNeighborsClassifier()
+#kNearest = GridSearchCV(knn, parameters)
+kNearest = KNeighborsClassifier(n_neighbors=5,weights="distance",algorithm="auto") ## best parameters
 
 MIN_PIXEL_WIDTH = 2
 MIN_PIXEL_HEIGHT = 8
@@ -99,11 +98,13 @@ def loadKNNDataAndTrainKNN():
         return False                                                                        # and return False
     # end try
 
-    npaClassifications = npaClassifications.reshape((npaClassifications.size, 1))       # reshape numpy array to 1d, necessary to pass to call to train
-
-    kNearest.setDefaultK(1)                                                             # set default K to 1
-
-    kNearest.train(npaFlattenedImages, cv2.ml.ROW_SAMPLE, npaClassifications)           # train KNN object
+    # npaClassifications = npaClassifications.reshape((npaClassifications.size, 1))       # reshape numpy array to 1d, necessary to pass to call to train
+    #
+    # kNearest.setDefaultK(1)                                                             # set default K to 1
+    #
+    # kNearest.train(npaFlattenedImages, cv2.ml.ROW_SAMPLE, npaClassifications)           # train KNN object
+    kNearest.fit(npaFlattenedImages, npaClassifications)
+    #print kNearest.best_params_
     return True
 
 def extractValue(imgOriginal):
@@ -359,9 +360,10 @@ def recognizeCharsInPlate(imgThresh, listOfMatchingChars):
         npaROIResized = np.float32(npaROIResized)               # convert from 1d numpy array of ints to 1d numpy array of floats
 
 
-        retval, npaResults, neigh_resp, dists = kNearest.findNearest(npaROIResized, k = 1)              # finally we can call findNearest !!!
-
-        strCurrentChar = str(chr(int(npaResults[0][0]))) # get character from results
+        # retval, npaResults, neigh_resp, dists = kNearest.findNearest(npaROIResized, k = 1)              # finally we can call findNearest !!!
+        npaResults = kNearest.predict(npaROIResized)
+        # strCurrentChar = str(chr(int(npaResults[0][0])))            # get character from results
+        strCurrentChar = str(chr(int(npaResults)))
         strChars = strChars + strCurrentChar                        # append current char to full string
 
     # end for
@@ -729,7 +731,7 @@ def main_helper_func(imgOriginalScene):
 
     listOfPossiblePlates = detectCharsInPlates(listOfPossiblePlates)  # detect chars in plates
 
-    # cv2.imshow("imgOriginalScene", imgOriginalScene)            # show scene image
+    #cv2.imshow("imgOriginalScene", imgOriginalScene)            # show scene image
 
     if len(listOfPossiblePlates) == 0:  # if no plates were found
         print("\nno license plates were detected\n")  # inform user no plates were found
@@ -746,11 +748,11 @@ def main_helper_func(imgOriginalScene):
             return 0
         # end if
 
-        # drawRedRectangleAroundPlate(imgOriginalScene, licPlate)  # draw red rectangle around plate
+        #drawRedRectangleAroundPlate(imgOriginalScene, licPlate)  # draw red rectangle around plate
         #
-        # writeLicensePlateCharsOnImage(imgOriginalScene, licPlate)  # write license plate text on the image
+        #writeLicensePlateCharsOnImage(imgOriginalScene, licPlate)  # write license plate text on the image
         #
-        # cv2.imshow("imgOriginalScene", imgOriginalScene)  # re-show scene image
+        #cv2.imshow("imgOriginalScene", imgOriginalScene)  # re-show scene image
 
     # end if else
     cv2.waitKey(0)  # hold windows open until user presses a key
@@ -780,5 +782,5 @@ def initialize_train_model():
 
 if __name__ == "__main__":
     initialize_train_model()
-    filename = input('Enter the path of the file : ')
+    filename = raw_input('Enter the path of the file : ')
     print("Licnese plate : ",main_func(filename))
