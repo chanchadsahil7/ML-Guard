@@ -4,13 +4,10 @@ import os
 import math
 import random
 import Main
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.model_selection import GridSearchCV
+from sklearn.externals import joblib
 
-#parameters = {'n_neighbors':[1,3,5,7], 'weights':['uniform',"distance"],"algorithm":["auto", "ball_tree", "kd_tree", "brute"]}
-#knn = KNeighborsClassifier()
-#kNearest = GridSearchCV(knn, parameters)
-kNearest = KNeighborsClassifier(n_neighbors=5,weights="distance",algorithm="auto") ## best parameters
+
+model = joblib.load('finalized_model.sav')
 
 MIN_PIXEL_WIDTH = 2
 MIN_PIXEL_HEIGHT = 8
@@ -78,34 +75,6 @@ class PossibleChar:
 
 # end class
 
-def loadKNNDataAndTrainKNN():
-    allContoursWithData = []                # declare empty lists,
-    validContoursWithData = []              # we will fill these shortly
-
-    try:
-        npaClassifications = np.loadtxt("classifications.txt", np.float32)                  # read in training classifications
-    except:                                                                                 # if file could not be opened
-        print("error, unable to open classifications.txt, exiting program\n")                # show error message
-        os.system("pause")
-        return False                                                                        # and return False
-    # end try
-
-    try:
-        npaFlattenedImages = np.loadtxt("flattened_images.txt", np.float32)                 # read in training images
-    except:                                                                                 # if file could not be opened
-        print("error, unable to open flattened_images.txt, exiting program\n")               # show error message
-        os.system("pause")
-        return False                                                                        # and return False
-    # end try
-
-    # npaClassifications = npaClassifications.reshape((npaClassifications.size, 1))       # reshape numpy array to 1d, necessary to pass to call to train
-    #
-    # kNearest.setDefaultK(1)                                                             # set default K to 1
-    #
-    # kNearest.train(npaFlattenedImages, cv2.ml.ROW_SAMPLE, npaClassifications)           # train KNN object
-    kNearest.fit(npaFlattenedImages, npaClassifications)
-    #print kNearest.best_params_
-    return True
 
 def extractValue(imgOriginal):
     height, width, numChannels = imgOriginal.shape
@@ -360,8 +329,8 @@ def recognizeCharsInPlate(imgThresh, listOfMatchingChars):
         npaROIResized = np.float32(npaROIResized)               # convert from 1d numpy array of ints to 1d numpy array of floats
 
 
-        # retval, npaResults, neigh_resp, dists = kNearest.findNearest(npaROIResized, k = 1)              # finally we can call findNearest !!!
-        npaResults = kNearest.predict(npaROIResized)
+        # retval, npaResults, neigh_resp, dists = model.findNearest(npaROIResized, k = 1)              # finally we can call findNearest !!!
+        npaResults = model.predict(npaROIResized)
         # strCurrentChar = str(chr(int(npaResults[0][0])))            # get character from results
         strCurrentChar = str(chr(int(npaResults)))
         strChars = strChars + strCurrentChar                        # append current char to full string
@@ -758,14 +727,6 @@ def main_helper_func(imgOriginalScene):
     cv2.waitKey(0)  # hold windows open until user presses a key
     return licPlate.strChars  # return license plate text
 
-
-def train_model():
-    blnKNNTrainingSuccessful = loadKNNDataAndTrainKNN()  # attempt KNN training
-    if blnKNNTrainingSuccessful == False:  # if KNN training was not successful
-        print("\nerror: KNN traning was not successful\n")  # show error message
-        return  # and exit program
-    # end if
-
 def main_func(filename):
     imgOriginalScene = cv2.imread(filename)  # open image
     if imgOriginalScene is None:                         # if image was not read successfully
@@ -777,10 +738,7 @@ def main_func(filename):
     result = main_helper_func(imgOriginalScene)
     return result
 
-def initialize_train_model():
-    train_model()
 
 if __name__ == "__main__":
-    initialize_train_model()
     filename = raw_input('Enter the path of the file : ')
     print("Licnese plate : ",main_func(filename))

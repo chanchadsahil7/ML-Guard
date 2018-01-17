@@ -1,3 +1,5 @@
+# GenData.py
+
 import sys
 import numpy as np
 import cv2
@@ -10,12 +12,11 @@ RESIZED_IMAGE_WIDTH = 20
 RESIZED_IMAGE_HEIGHT = 30
 
 ###################################################################################################
-def main():
-    filename = input('Enter the file path : ')
+def main(filename):
     imgTrainingNumbers = cv2.imread(filename)            # read in training numbers image
 
     if imgTrainingNumbers is None:                          # if image was not read successfully
-        print("error: image not read from file \n\n")        # print error message to std out
+        print "Error: image not read from file \n\n"        # print error message to std out
         os.system("pause")                                  # pause so user can see error message
         return                                              # and exit function (which exits program)
     # end if
@@ -51,7 +52,7 @@ def main():
                      ord('K'), ord('L'), ord('M'), ord('N'), ord('O'), ord('P'), ord('Q'), ord('R'), ord('S'), ord('T'),
                      ord('U'), ord('V'), ord('W'), ord('X'), ord('Y'), ord('Z')]
 
-    COUNT = 0
+    count = 0
     for npaContour in npaContours:  # for each contour
         if cv2.contourArea(npaContour) > MIN_CONTOUR_AREA:          # if contour is big enough to consider
             [intX, intY, intW, intH] = cv2.boundingRect(npaContour)         # get and break out bounding rect
@@ -62,8 +63,6 @@ def main():
                           (intX+intW,intY+intH),        # lower right corner
                           (0, 0, 255),                  # red
                           2)                            # thickness
-            #cv2.imshow("hello",imgTrainingNumbers)
-
 
             imgROI = imgThresh[intY:intY+intH, intX:intX+intW]                                  # crop char out of threshold image
             imgROIResized = cv2.resize(imgROI, (RESIZED_IMAGE_WIDTH, RESIZED_IMAGE_HEIGHT))     # resize image, this will be more consistent for recognition and storage
@@ -71,14 +70,13 @@ def main():
             cv2.imshow("imgROI", imgROI)                    # show cropped out char for reference
             cv2.imshow("imgROIResized", imgROIResized)      # show resized image for reference
             #cv2.imshow("training_numbers.png", imgTrainingNumbers)      # show training numbers image, this will now have red rectangles drawn on it
-
+            count += 1
             intChar = cv2.waitKey(0)                     # get key press
 
-            if intChar == 27:
-                print(COUNT)# if esc key was pressed
+            if intChar == 27:                   # if esc key was pressed
                 sys.exit()                      # exit program
-            elif intChar in intValidChars:
-                COUNT += 1# else if the char is in the list of chars we are looking for . . .
+            elif intChar in intValidChars:      # else if the char is in the list of chars we are looking for . . .
+
                 intClassifications.append(intChar)                                                # append classification char to integer list of chars (we will convert to float later before writing to file)
 
                 npaFlattenedImage = imgROIResized.reshape((1, RESIZED_IMAGE_WIDTH * RESIZED_IMAGE_HEIGHT))  # flatten image to 1d numpy array so we can write to file later
@@ -86,12 +84,12 @@ def main():
             # end if
         # end if
     # end for
-    print(COUNT)
+
     fltClassifications = np.array(intClassifications, np.float32)                   # convert classifications list of ints to numpy array of floats
 
     npaClassifications = fltClassifications.reshape((fltClassifications.size, 1))   # flatten numpy array of floats to 1d so we can write to file later
 
-    print("\n\ntraining complete !!\n")
+    print "\n\nTraining Complete !!\n" ,count
 
     np.savetxt("classifications.txt", npaClassifications)           # write flattened images to file
     np.savetxt("flattened_images.txt", npaFlattenedImages)          #
@@ -102,6 +100,10 @@ def main():
 
 ###################################################################################################
 if __name__ == "__main__":
-    main()
+    filename = raw_input("Enter the train data file path : ")
+    main(filename)
 # end if
+
+
+
 
