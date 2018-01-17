@@ -40,7 +40,7 @@ def loadTrainDataAndTrainModel():
 
     # save the model to disk
     filename = 'finalized_model.sav'
-    joblib.dump(model, filename)
+    joblib.dump(model, filename,compress=3)
     return True
 
 if __name__ == "__main__":
